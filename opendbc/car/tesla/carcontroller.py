@@ -12,6 +12,8 @@ class CarController(CarControllerBase):
     self.apply_angle_last = 0
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(self.packer)
+    self.das_control_cntr_offset = 0
+    self.das_control_cntr_synced = False
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -41,7 +43,12 @@ class CarController(CarControllerBase):
     if self.CP.openpilotLongitudinalControl and self.frame % 4 == 0:
       state = 4 if not hands_on_fault else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
-      cntr = (self.frame // 4) % 8
+      cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
+      if not self.das_control_cntr_synced:
+        self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - cntr
+        self.das_control_cntr_synced = True
+        cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
+
       can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CC.longActive))
 
     # Increment counter so cancel is prioritized even without openpilot longitudinal
