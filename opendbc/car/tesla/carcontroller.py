@@ -13,7 +13,8 @@ class CarController(CarControllerBase):
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(self.packer)
     self.das_control_cntr_offset = 0
-    self.das_control_cntr_synced = False
+    self.das_steering_control_cntr_offset = 0
+    self.cntr_sync_done = False
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -22,6 +23,12 @@ class CarController(CarControllerBase):
     # Disengage and allow for user override
     hands_on_fault = CS.hands_on_level >= 3
     lkas_enabled = CC.latActive and not hands_on_fault
+
+    # sync message counter to avoid "cruise disabled" fault
+    if not self.cntr_sync_done:
+      self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
+      self.das_steering_control_cntr_offset = 10 + CS.das_steering_control_cntr - (self.frame // 2) % 16
+      self.cntr_sync_done = True
 
     if self.frame % 2 == 0:
       if lkas_enabled:
@@ -34,7 +41,7 @@ class CarController(CarControllerBase):
         apply_angle = CS.out.steeringAngleDeg
 
       self.apply_angle_last = apply_angle
-      can_sends.append(self.tesla_can.create_steering_control(apply_angle, lkas_enabled, (self.frame // 2) % 16))
+      can_sends.append(self.tesla_can.create_steering_control(apply_angle, lkas_enabled, (self.frame // 2 + self.das_steering_control_cntr_offset) % 16))
 
     if self.frame % 10 == 0:
       can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10) % 16))
@@ -44,11 +51,6 @@ class CarController(CarControllerBase):
       state = 4 if not hands_on_fault else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
       cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
-      if not self.das_control_cntr_synced:
-        self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - cntr
-        self.das_control_cntr_synced = True
-        cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
-
       can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CC.longActive))
 
     # Increment counter so cancel is prioritized even without openpilot longitudinal
