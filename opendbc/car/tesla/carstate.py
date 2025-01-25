@@ -15,7 +15,7 @@ class CarState(CarStateBase):
 
     self.hands_on_level = 0
     self.das_control = None
-    self.das_steering_control_cntr = 0
+    self.das_steering_control = None
 
   def update(self, can_parsers) -> structs.CarState:
     cp_party = can_parsers[Bus.party]
@@ -84,7 +84,7 @@ class CarState(CarStateBase):
 
     # Messages needed by carcontroller
     self.das_control = copy.copy(cp_ap_party.vl["DAS_control"])
-    self.das_steering_control_cntr = cp_ap_party.vl["DAS_steeringControl"]["DAS_steeringControlCounter"]
+    self.das_steering_control = copy.copy(cp_ap_party.vl["DAS_steeringControl"])
 
     return ret
 
@@ -102,6 +102,7 @@ class CarState(CarStateBase):
 
     ap_party_messages = [
       ("DAS_control", 25),
+      ("DAS_steeringControl", 50),
       ("DAS_status", 2),
       ("SCCM_steeringAngleSensor", 100),
     ]

@@ -27,7 +27,7 @@ class CarController(CarControllerBase):
     # sync message counter to avoid "cruise disabled" fault
     if not self.cntr_sync_done:
       self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
-      self.das_steering_control_cntr_offset = 10 + CS.das_steering_control_cntr - (self.frame // 2) % 16
+      self.das_steering_control_cntr_offset = 10 + CS.das_steering_control["DAS_steeringControlCounter"] - (self.frame // 2) % 16
       self.cntr_sync_done = True
 
     if self.frame % 2 == 0:
