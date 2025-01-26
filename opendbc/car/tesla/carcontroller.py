@@ -43,7 +43,7 @@ class CarController(CarControllerBase):
     # steering allowed
     if self.frame % 10 == 0:
       if self.aps_eac_monitor_cntr_offset == 0:
-        self.aps_eac_monitor_cntr_offset = 16 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
+        self.aps_eac_monitor_cntr_offset = 17 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
       can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10 + self.aps_eac_monitor_cntr_offset) % 16))
 
     # Longitudinal control
