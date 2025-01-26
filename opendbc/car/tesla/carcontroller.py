@@ -12,9 +12,9 @@ class CarController(CarControllerBase):
     self.apply_angle_last = 0
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(self.packer)
+    self.aps_eac_monitor_cntr_offset = 0
     self.das_control_cntr_offset = 0
     self.das_steering_control_cntr_offset = 0
-    self.cntr_sync_done = False
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -24,12 +24,7 @@ class CarController(CarControllerBase):
     hands_on_fault = CS.hands_on_level >= 3
     lkas_enabled = CC.latActive and not hands_on_fault
 
-    # sync message counter to avoid "cruise disabled" fault
-    if not self.cntr_sync_done:
-      self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
-      self.das_steering_control_cntr_offset = 10 + CS.das_steering_control["DAS_steeringControlCounter"] - (self.frame // 2) % 16
-      self.cntr_sync_done = True
-
+    # lateral control
     if self.frame % 2 == 0:
       if lkas_enabled:
         # Angular rate limit based on speed
@@ -41,15 +36,23 @@ class CarController(CarControllerBase):
         apply_angle = CS.out.steeringAngleDeg
 
       self.apply_angle_last = apply_angle
+      if self.das_steering_control_cntr_offset == 0:
+        self.das_steering_control_cntr_offset = 23 + CS.das_steering_control["DAS_steeringControlCounter"] - (self.frame // 2) % 16
       can_sends.append(self.tesla_can.create_steering_control(apply_angle, lkas_enabled, (self.frame // 2 + self.das_steering_control_cntr_offset) % 16))
 
+    # steering allowed
     if self.frame % 10 == 0:
-      can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10) % 16))
+      if self.aps_eac_monitor_cntr_offset == 0:
+        self.aps_eac_monitor_cntr_offset = 23 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
+      can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10 + self.aps_eac_monitor_cntr_offset) % 16))
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl and self.frame % 4 == 0:
       state = 4 if not hands_on_fault else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
+      state = 13
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+      if self.das_control_cntr_offset == 0:
+        self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
       cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
       can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CC.longActive))
 
