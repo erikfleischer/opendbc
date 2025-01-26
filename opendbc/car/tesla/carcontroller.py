@@ -43,7 +43,7 @@ class CarController(CarControllerBase):
     # steering allowed
     if self.frame % 10 == 0:
       if self.aps_eac_monitor_cntr_offset == 0:
-        self.aps_eac_monitor_cntr_offset = 18 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
+        self.aps_eac_monitor_cntr_offset = 16 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
       can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10 + self.aps_eac_monitor_cntr_offset) % 16))
 
     # Longitudinal control
@@ -51,7 +51,7 @@ class CarController(CarControllerBase):
       state = 4 if not hands_on_fault else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
       if self.das_control_cntr_offset == 0:
-        self.das_control_cntr_offset = 10 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
+        self.das_control_cntr_offset = 9 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8
       cntr = (self.frame // 4 + self.das_control_cntr_offset) % 8
       can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CC.longActive))
 
