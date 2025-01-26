@@ -48,7 +48,7 @@ class CarController(CarControllerBase):
 
     # Longitudinal control
     if self.CP.openpilotLongitudinalControl and self.frame % 4 == 0:
-      state = 4 if not hands_on_fault else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
+      state = 4 if not hands_on_fault or not CS.tesla_autopilot_active else 13  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
       if self.das_control_cntr_offset == 0:
         self.das_control_cntr_offset = 9 + CS.das_control["DAS_controlCounter"] - (self.frame // 4) % 8

@@ -17,6 +17,8 @@ class CarState(CarStateBase):
     self.das_control = None
     self.das_steering_control = None
     self.aps_eac_monitor = None
+    self.cruise_disabled_seen = False
+    self.tesla_autopilot_active = False
 
   def update(self, can_parsers) -> structs.CarState:
     cp_party = can_parsers[Bus.party]
@@ -53,6 +55,15 @@ class CarState(CarStateBase):
     speed_units = self.can_define.dv["DI_state"]["DI_speedUnits"].get(int(cp_party.vl["DI_state"]["DI_speedUnits"]), None)
 
     ret.cruiseState.enabled = cruise_state in ("ENABLED", "STANDSTILL", "OVERRIDE", "PRE_FAULT", "PRE_CANCEL")
+    # detect if autopilot is active during openpilot startup
+    if not self.cruise_disabled_seen:
+      if ret.cruiseState.enabled:
+        # Tesla autopilot is active. Overriding AP messages will cause a "cruise disabled fault".
+        self.tesla_autopilot_active = True
+      else:
+        self.cruise_disabled_seen = True
+        self.tesla_autopilot_active = False
+
     if speed_units == "KPH":
       ret.cruiseState.speed = cp_party.vl["DI_state"]["DI_digitalSpeed"] * CV.KPH_TO_MS
     elif speed_units == "MPH":
