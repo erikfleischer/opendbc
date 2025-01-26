@@ -37,13 +37,13 @@ class CarController(CarControllerBase):
 
       self.apply_angle_last = apply_angle
       if self.das_steering_control_cntr_offset == 0:
-        self.das_steering_control_cntr_offset = 23 + CS.das_steering_control["DAS_steeringControlCounter"] - (self.frame // 2) % 16
+        self.das_steering_control_cntr_offset = 18 + CS.das_steering_control["DAS_steeringControlCounter"] - (self.frame // 2) % 16
       can_sends.append(self.tesla_can.create_steering_control(apply_angle, lkas_enabled, (self.frame // 2 + self.das_steering_control_cntr_offset) % 16))
 
     # steering allowed
     if self.frame % 10 == 0:
       if self.aps_eac_monitor_cntr_offset == 0:
-        self.aps_eac_monitor_cntr_offset = 23 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
+        self.aps_eac_monitor_cntr_offset = 18 + CS.aps_eac_monitor["APS_eacMonitorCounter"] - (self.frame // 10) % 16
       can_sends.append(self.tesla_can.create_steering_allowed((self.frame // 10 + self.aps_eac_monitor_cntr_offset) % 16))
 
     # Longitudinal control
