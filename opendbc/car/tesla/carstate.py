@@ -15,6 +15,7 @@ class CarState(CarStateBase):
 
     self.hands_on_level = 0
     self.das_control = None
+    self.cruise_disabled_seen = False
 
   def update(self, can_parsers) -> structs.CarState:
     cp_party = can_parsers[Bus.party]
@@ -59,6 +60,15 @@ class CarState(CarStateBase):
     ret.cruiseState.standstill = False  # This needs to be false, since we can resume from stop without sending anything special
     ret.standstill = cruise_state == "STANDSTILL"
     ret.accFaulted = cruise_state == "FAULT"
+
+    if not self.cruise_disabled_seen:
+      if ret.cruiseState.enabled:
+        # Tesla autopilot is active. Overriding AP messages will cause a "cruise disabled fault".
+        # ret.steerFaultTemporary = True
+        ret.cruiseState.available = False
+        ret.cruiseState.enabled = False
+      else:
+        self.cruise_disabled_seen = True
 
     # Gear
     ret.gearShifter = GEAR_MAP[self.can_define.dv["DI_systemStatus"]["DI_gear"].get(int(cp_party.vl["DI_systemStatus"]["DI_gear"]), "DI_GEAR_INVALID")]
