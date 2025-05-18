@@ -89,8 +89,8 @@ class CarController(CarControllerBase):
       # Angular rate limit based on speed
       if CC.latActive:
         # let's say that 1 nm = 1 m/s^2 of lateral acceleration
-        curvature_from_torque = driver_torque / (max(CS.out.vEgoRaw, 1) ** 2)
-        angle_from_torque = math.degrees(self.VM.get_steer_from_curvature(curvature_from_torque, CS.out.vEgoRaw, 0))
+        curvature_from_torque = driver_torque / (max(CS.out.vEgoRaw, 20) ** 2)
+        angle_from_torque = math.degrees(self.VM.get_steer_from_curvature(curvature_from_torque, max(CS.out.vEgoRaw, 20), 0))
         self.angle_modifier = np.clip(angle_from_torque, self.angle_modifier - 5, self.angle_modifier + 5)
         # self.angle_modifier += angle_from_torque * (DT_CTRL * 0.5)  # ramp over 0.5s
       else:
