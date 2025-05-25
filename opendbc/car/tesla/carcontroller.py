@@ -84,7 +84,7 @@ class CarController(CarControllerBase):
     if abs(CS.out.steeringTorque) >= 0.5:
       driver_torque = CS.out.steeringTorque - 0.5 * np.sign(CS.out.steeringTorque)
     # Clip driver torque below disengagement limit.
-    # This makes steering feel a little stiffer close to the disengament limit
+    # This makes steering feel a little stiffer close to the disengagement limit
     # signaling to the driver that openpilot is about to disengage.
     driver_torque = np.clip(driver_torque, -2.0, 2.0)
     driver_torque = self.driver_torque.update(driver_torque)
@@ -93,7 +93,7 @@ class CarController(CarControllerBase):
       # Angular rate limit based on speed
       if CC.latActive:
         # let's say that 1 nm = 1 m/s^2 of lateral acceleration
-	      # Reduce stiffness a little. This helps a little in feeling the moment when the system is about to disengage.
+        # Reduce stiffness a little. This helps a little in feeling the moment when the system is about to disengage.
         curvature_from_torque = 1.2 * driver_torque / (max(CS.out.vEgoRaw, 20) ** 2)
         angle_from_torque = math.degrees(self.VM.get_steer_from_curvature(curvature_from_torque, max(CS.out.vEgoRaw, 20), 0))
         self.angle_modifier = np.clip(angle_from_torque, self.angle_modifier - 5, self.angle_modifier + 5)
