@@ -81,8 +81,8 @@ class CarController(CarControllerBase):
 
     # negative is right, etc.
     driver_torque = 0.0
-    if abs(CS.out.steeringTorque) >= 0.5:
-      driver_torque = CS.out.steeringTorque - 0.5 * np.sign(CS.out.steeringTorque)
+    if abs(CS.out.steeringTorque) >= 1.0:
+      driver_torque = CS.out.steeringTorque - 1.0 * np.sign(CS.out.steeringTorque)
     # Clip driver torque below disengagement limit.
     # This makes steering feel a little stiffer close to the disengagement limit
     # signaling to the driver that openpilot is about to disengage.
