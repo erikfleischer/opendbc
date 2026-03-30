@@ -394,6 +394,53 @@ BO_ 1021 UI_autopilotControl: 8 ETH
  SG_ UI_coldStartMonarchInFactory m2 : 14|1@1+ (1,0) [0|1] ""  XXX
  SG_ UI_autopilotControlMux2Valid m2 : 15|1@1+ (1,0) [0|1] ""  XXX
 
+BO_ 1016 UI_driverAssistControl: 8 ETH
+ SG_ UI_accFollowDistanceSetting : 0|3@1+ (1,0) [0|7] ""  XXX
+ SG_ UI_adaptiveSetSpeedEnable : 3|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_alcOffHighwayEnable : 4|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_autoSummonEnable : 5|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_autopilotControlRequest : 6|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_coastToCoast : 7|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_curvSpeedAdaptDisable : 8|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_curvatureDatabaseOnly : 9|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_dasDeveloper : 10|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_driveOnMapsEnable : 11|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_drivingSide : 12|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_enableClipParkedTelemetry : 14|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableClipStartStopTelemetry : 15|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableClipTelemetry : 16|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableRoadSegmentTelemetry : 17|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableTripTelemetry : 18|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableVinAssociation : 19|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_enableVisionOnlyStops : 20|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_exceptionListEnable : 21|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_followNavRouteEnable : 22|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_fuseHPPDisable : 23|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_fuseLanesDisable : 24|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_fuseVehiclesDisable : 25|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_handsOnRequirementDisable : 26|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_hasDriveOnNav : 27|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_isaSpeedingChimeMuted : 28|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_lssElkEnabled : 29|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_lssLdwEnabled : 30|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_lssLkaEnabled : 31|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_roadCheckDisable : 32|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_selfParkRequest : 33|4@1+ (1,0) [0|15] ""  XXX
+ SG_ UI_smartSummonType : 37|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_source3D : 39|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_summonEntryType : 41|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_summonExitType : 43|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_summonHeartbeat : 45|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_summonReverseDist : 47|6@1+ (1,0) [0|63] ""  XXX
+ SG_ UI_suppressExitPassingLane : 53|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_ulcBlindSpotConfig : 54|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_ulcOffHighway : 56|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_ulcSpeedConfig : 57|2@1+ (1,0) [0|3] ""  XXX
+ SG_ UI_ulcStalkConfirm : 59|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_undertakeAssistEnable : 60|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_validationLoop : 61|1@1+ (1,0) [0|1] ""  XXX
+ SG_ UI_visionSpeedType : 62|2@1+ (1,0) [0|3] ""  XXX
+
 CM_ BO_ 605 "Bytes change when toggling between FSD and AP, as well as Traffic Light and Stop Sign Control in TACC";
 
 CM_ SG_ 659 DAS_autosteerEnabled "1 if Autosteer or FSD is enabled, 0 otherwise";
@@ -402,6 +449,8 @@ CM_ SG_ 785 rightBlinkerOn "only describes stalk position if half pressed withou
 CM_ SG_ 785 scrollWheelPressed "captures either scroll wheel left, right or down press";
 
 CM_ BO_ 1021 "Model 3 MCU2 2026.2 (can_frames_decoded_all_values_mcu2.json): ID 0x3FD, three mux slots. Signal names and VAL_ enums from JSON; bit layout is packed sequentially after the mux using enum-derived widths, 4b placeholders for undocumented speed fields, 8b for UI_fsdMaxSpeedOffsetPercentage - confirm against captures.";
+
+CM_ BO_ 1016 "Model 3 MCU2 2026.2 (can_frames_decoded_all_values_mcu2.json): ID 0x3F8. Signal order and VAL_ enums from JSON; bit layout is sequential LSB-first packed to 64b using enum-derived widths and legacy-sized fields for summon/park/ulc (matches prior tesla_can.dbc field sizes where enums absent) - confirm against captures.";
 
 VAL_ 545 VCFRONT_uiAudioLVState 1 "LV_ON" 2 "LV_GOING_DOWN" 3 "LV_FAULT" 0 "LV_OFF" ;
 VAL_ 545 VCFRONT_uiHiCurrentLVState 1 "LV_ON" 2 "LV_GOING_DOWN" 3 "LV_FAULT" 0 "LV_OFF" ;
@@ -583,3 +632,27 @@ VAL_ 1021 UI_overrideSleepWithSuspend 0 "DISABLED" 1 "ENABLED" ;
 VAL_ 1021 UI_regulatoryLaneAssistLevel 0 "WARNING" 1 "ASSIST" ;
 VAL_ 1021 UI_apmv3Branch 0 "LIVE" 1 "STAGE" 2 "DEV" 3 "STAGE2" 4 "EAP" 5 "DEMO" ;
 VAL_ 1021 UI_autoTurnSignalMode 0 "OFF" 1 "AUTO_CANCEL" ;
+VAL_ 1016 UI_accFollowDistanceSetting 0 "1" 1 "2" 2 "3" 3 "4" 4 "5" 5 "6" 6 "7" 7 "SNA" ;
+VAL_ 1016 UI_autopilotControlRequest 0 "LEGACY_LAT_CTRL" 1 "NEXT_GEN_CTRL" ;
+VAL_ 1016 UI_curvSpeedAdaptDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_curvatureDatabaseOnly 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_driveOnMapsEnable 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_drivingSide 0 "LEFT" 1 "RIGHT" 2 "UNKNOWN" ;
+VAL_ 1016 UI_exceptionListEnable 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_followNavRouteEnable 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_fuseHPPDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_fuseLanesDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_fuseVehiclesDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_handsOnRequirementDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_lssElkEnabled 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_lssLdwEnabled 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_lssLkaEnabled 0 "OFF" 1 "ON" ;
+VAL_ 1016 UI_roadCheckDisable 0 "ON" 1 "OFF" ;
+VAL_ 1016 UI_selfParkRequest 0 "NONE" 1 "SELF_PARK_FORWARD" 2 "SELF_PARK_REVERSE" 3 "ABORT" 4 "PRIME" 5 "PAUSE" 6 "RESUME" 7 "AUTO_SUMMON_FORWARD" 8 "AUTO_SUMMON_REVERSE" 9 "AUTO_SUMMON_CANCEL" 10 "AUTO_SUMMON_PRIMED" 11 "SMART_SUMMON" 12 "SMART_SUMMON_NO_OP" 15 "SNA" ;
+VAL_ 1016 UI_smartSummonType 0 "PIN_DROP" 1 "FIND_ME" 2 "SMART_AUTOPARK" ;
+VAL_ 1016 UI_source3D 0 "Z_FROM_MAP" 1 "Z_FROM_PATH_PREDICTION" 2 "XYZ_PREDICTION" ;
+VAL_ 1016 UI_summonEntryType 0 "STRAIGHT" 1 "TURN_RIGHT" 2 "TURN_LEFT" 3 "SNA" ;
+VAL_ 1016 UI_summonExitType 0 "STRAIGHT" 1 "TURN_RIGHT" 2 "TURN_LEFT" 3 "SNA" ;
+VAL_ 1016 UI_ulcBlindSpotConfig 0 "STANDARD" 1 "AGGRESSIVE" 2 "MAD_MAX" ;
+VAL_ 1016 UI_ulcSpeedConfig 0 "DISABLED" 1 "MILD" 2 "AVERAGE" 3 "MAD_MAX" ;
+VAL_ 1016 UI_visionSpeedType 0 "DISABLED" 1 "ONE_SECOND" 2 "TWO_SECOND" 3 "OPTIMIZED" ;
