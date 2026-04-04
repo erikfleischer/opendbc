@@ -25,6 +25,8 @@ class CarState(CarStateBase):
     self.hands_on_level = 0
     self.das_control = None
 
+    self.last_UI_autopilotControlIndex = 0
+
   def update_autopark_state(self, autopark_state: str, cruise_enabled: bool):
     autopark_now = autopark_state in ("ACTIVE", "COMPLETE", "SELFPARK_STARTED")
     if autopark_now and not self.autopark_prev and not self.cruise_enabled_prev:
@@ -135,8 +137,19 @@ class CarState(CarStateBase):
 
     # Buttons # ToDo: add Gap adjust button
 
+    #
     # Messages needed by carcontroller
     self.das_control = copy.copy(cp_ap_party.vl["DAS_control"])
+
+    # provides data for poking the bear
+    cp_body = can_parsers[Bus.body]
+    ret.controlIndex = cp_body.vl["UI_autopilotControlIndex"]["UI_autopilotControlIndex"]
+    ret.UI_autopilotControlIndex_raw = cp_body.message_states[0x3F8].last_dat
+    if ret.controlIndex != self.last_UI_autopilotControlIndex:
+      self.last_UI_autopilotControlIndex = ret.controlIndex
+      ret.UI_autopilotControlIndex_updated = True
+    else:
+      ret.UI_autopilotControlIndex_updated = False
 
     return ret
 

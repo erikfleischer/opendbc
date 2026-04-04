@@ -44,6 +44,7 @@ class MessageState:
   counter_fail: int = 0
   first_seen_nanos: int = 0
   last_warning_log_nanos: int = 0
+  last_dat: bytes = b""
 
   def rate_limited_log(self, last_update_nanos: int, msg: str) -> None:
     if (last_update_nanos - self.last_warning_log_nanos) >= 1_000_000_000:
@@ -54,6 +55,7 @@ class MessageState:
     tmp_vals: list[float] = [0.0] * len(self.signals)
     checksum_failed = False
     counter_failed = False
+    self.last_dat = dat
 
     if self.first_seen_nanos == 0:
       self.first_seen_nanos = nanos
