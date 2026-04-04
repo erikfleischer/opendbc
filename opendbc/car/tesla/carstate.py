@@ -26,6 +26,7 @@ class CarState(CarStateBase):
     self.das_control = None
 
     self.last_UI_autopilotControlIndex = 0
+    self.UI_autopilotControlIndex_raw = bytearray(6)
 
   def update_autopark_state(self, autopark_state: str, cruise_enabled: bool):
     autopark_now = autopark_state in ("ACTIVE", "COMPLETE", "SELFPARK_STARTED")
@@ -143,15 +144,32 @@ class CarState(CarStateBase):
 
     # provides data for poking the bear
     cp_body = can_parsers[Bus.body]
-    ret.controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
-    ret.UI_autopilotControlIndex_raw = cp_body.message_states[0x3F8].last_dat
-    if ret.controlIndex != self.last_UI_autopilotControlIndex:
-      self.last_UI_autopilotControlIndex = ret.controlIndex
-      ret.UI_autopilotControlIndex_updated = True
+    controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
+    self.UI_autopilotControl_raw = cp_body.message_states[0x3F8].last_dat
+    if controlIndex != self.last_UI_autopilotControlIndex:
+      self.last_UI_autopilotControlIndex = controlIndex
+      self.UI_autopilotControlIndex_updated = True
     else:
-      ret.UI_autopilotControlIndex_updated = False
+      self.UI_autopilotControlIndex_updated = False
 
     return ret
+
+  def poke_the_bear(self):
+    if self.UI_autopilotControl_raw is not None and self.UI_autopilotControlIndex_updated:
+      # set bit 46 / signal UI_enableFullSelfDriving to 1
+      # Set bit 46 (counting from LSB) to 1 in UI_autopilotControlIndex_raw bytes object
+      if len(self.UI_autopilotControl_raw) >= 6:
+        # Convert bytes to mutable bytearray for bit manipulation
+        b = bytearray(self.UI_autopilotControl_raw)
+        # Bit 46 is bit 6 of byte 5 (indices 0-based, little-endian order)
+        b[5] |= (1 << 6)
+        UI_autopilotControlIndex_raw_modified = bytes(b)
+        can_sends = [(0x3F8, UI_autopilotControlIndex_raw_modified, 1)]
+        return can_sends
+      else:
+        return None
+    else:
+      return None
 
   @staticmethod
   def get_can_parsers(CP):
