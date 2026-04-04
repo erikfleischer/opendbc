@@ -143,7 +143,7 @@ class CarState(CarStateBase):
 
     # provides data for poking the bear
     cp_body = can_parsers[Bus.body]
-    ret.controlIndex = cp_body.vl["UI_autopilotControlIndex"]["UI_autopilotControlIndex"]
+    ret.controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
     ret.UI_autopilotControlIndex_raw = cp_body.message_states[0x3F8].last_dat
     if ret.controlIndex != self.last_UI_autopilotControlIndex:
       self.last_UI_autopilotControlIndex = ret.controlIndex
@@ -157,5 +157,6 @@ class CarState(CarStateBase):
   def get_can_parsers(CP):
     return {
       Bus.party: CANParser(DBC[CP.carFingerprint][Bus.party], [], CANBUS.party),
-      Bus.ap_party: CANParser(DBC[CP.carFingerprint][Bus.party], [], CANBUS.autopilot_party)
+      Bus.ap_party: CANParser(DBC[CP.carFingerprint][Bus.party], [], CANBUS.autopilot_party),
+      Bus.body: CANParser(DBC[CP.carFingerprint][Bus.body], [], CANBUS.vehicle)
     }
