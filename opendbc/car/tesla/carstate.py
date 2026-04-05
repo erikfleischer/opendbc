@@ -148,11 +148,14 @@ class CarState(CarStateBase):
     controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
     # todo: handle missing message somehow
     self.UI_autopilotControl_raw = cp_body.message_states[0x3FD].last_dat
-    if controlIndex == 0:
+<<<<<<< Updated upstream
+=======
+    if controlIndex == 0 and len(self.UI_autopilotControl_raw) >= 6:
       if self.UI_autopilotControl_raw is not None:
         self.poking_enabled = bool((self.UI_autopilotControl_raw[4] >> 6) & 0x01)
       else:
         self.poking_enabled = False
+>>>>>>> Stashed changes
     if controlIndex != self.last_UI_autopilotControlIndex:
       self.last_UI_autopilotControlIndex = controlIndex
       self.UI_autopilotControlIndex_updated = True
