@@ -27,6 +27,7 @@ class CarState(CarStateBase):
 
     self.last_UI_autopilotControlIndex = 0
     self.UI_autopilotControlIndex_raw = bytearray(6)
+    self.poking_enabled = 0
 
   def update_autopark_state(self, autopark_state: str, cruise_enabled: bool):
     autopark_now = autopark_state in ("ACTIVE", "COMPLETE", "SELFPARK_STARTED")
@@ -147,6 +148,11 @@ class CarState(CarStateBase):
     controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
     # todo: handle missing message somehow
     self.UI_autopilotControl_raw = cp_body.message_states[0x3FD].last_dat
+    if controlIndex == 0:
+      if self.UI_autopilotControl_raw is not None:
+        self.poking_enabled = bool((self.UI_autopilotControl_raw[4] >> 6) & 0x01)
+      else:
+        self.poking_enabled = False
     if controlIndex != self.last_UI_autopilotControlIndex:
       self.last_UI_autopilotControlIndex = controlIndex
       self.UI_autopilotControlIndex_updated = True
@@ -156,10 +162,8 @@ class CarState(CarStateBase):
     return ret
 
   def poke_the_bear(self):
-    if self.UI_autopilotControl_raw is not None and self.UI_autopilotControlIndex_updated:
-      # set bit 46 / signal UI_enableFullSelfDriving to 1
-      # Set bit 46 (counting from LSB) to 1 in UI_autopilotControlIndex_raw bytes object
-      if len(self.UI_autopilotControl_raw) >= 6:
+    if self.UI_autopilotControlIndex_updated and len(self.UI_autopilotControl_raw) >= 6:
+      if self.last_UI_autopilotControlIndex == 0 and self.poking_enabled:
         # Convert bytes to mutable bytearray for bit manipulation
         b = bytearray(self.UI_autopilotControl_raw)
         # Bit 46 is bit 6 of byte 5 (indices 0-based, little-endian order)
@@ -167,8 +171,37 @@ class CarState(CarStateBase):
         UI_autopilotControlIndex_raw_modified = bytes(b)
         can_sends = [(0x3FD, UI_autopilotControlIndex_raw_modified, 1)]
         return can_sends
+      elif self.last_UI_autopilotControlIndex == 1:
+        # set bit 19 to 0
+        # Convert bytes to mutable bytearray for bit manipulation
+        b = bytearray(self.UI_autopilotControl_raw)
+        # Bit 19 is bit 3 of byte 2 (indices 0-based, little-endian order)
+        b[2] &= ~(1 << 3)
+        UI_autopilotControlIndex_raw_modified = bytes(b)
+        can_sends = [(0x3FD, UI_autopilotControlIndex_raw_modified, 1)]
+        return can_sends
+      elif self.last_UI_autopilotControlIndex == 2 and self.poking_enabled:
+        b = bytearray(self.UI_autopilotControl_raw)
+        b[0] &= ~(0b11000000)
+        b[1] &= ~(0b00111111)
+        UI_autopilotControlIndex_raw_modified = bytes(b)
+        can_sends = [(0x3FD, UI_autopilotControlIndex_raw_modified, 1)]
+        return can_sends
       else:
         return None
+    #  if self.UI_autopilotControl_raw is not None and self.UI_autopilotControlIndex_updated:
+    #   # set bit 46 / signal UI_enableFullSelfDriving to 1
+    #   # Set bit 46 (counting from LSB) to 1 in UI_autopilotControlIndex_raw bytes object
+    #   if len(self.UI_autopilotControl_raw) >= 6:
+    #     # Convert bytes to mutable bytearray for bit manipulation
+    #     b = bytearray(self.UI_autopilotControl_raw)
+    #     # Bit 46 is bit 6 of byte 5 (indices 0-based, little-endian order)
+    #     b[5] |= (1 << 6)
+    #     UI_autopilotControlIndex_raw_modified = bytes(b)
+    #     can_sends = [(0x3FD, UI_autopilotControlIndex_raw_modified, 1)]
+    #     return can_sends
+    #   else:
+    #     return None
     else:
       return None
 
