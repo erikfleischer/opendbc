@@ -145,7 +145,8 @@ class CarState(CarStateBase):
     # provides data for poking the bear
     cp_body = can_parsers[Bus.body]
     controlIndex = cp_body.vl["UI_autopilotControl"]["UI_autopilotControlIndex"]
-    self.UI_autopilotControl_raw = cp_body.message_states[0x3F8].last_dat
+    # todo: handle missing message somehow
+    self.UI_autopilotControl_raw = cp_body.message_states[0x3FD].last_dat
     if controlIndex != self.last_UI_autopilotControlIndex:
       self.last_UI_autopilotControlIndex = controlIndex
       self.UI_autopilotControlIndex_updated = True
@@ -164,7 +165,7 @@ class CarState(CarStateBase):
         # Bit 46 is bit 6 of byte 5 (indices 0-based, little-endian order)
         b[5] |= (1 << 6)
         UI_autopilotControlIndex_raw_modified = bytes(b)
-        can_sends = [(0x3F8, UI_autopilotControlIndex_raw_modified, 1)]
+        can_sends = [(0x3FD, UI_autopilotControlIndex_raw_modified, 1)]
         return can_sends
       else:
         return None
