@@ -64,8 +64,12 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
 
   def setUp(self):
     self.VM = VehicleModel(get_safety_CP())
-    self.packer = CANPackerSafety("tesla_model3_party")
-    self.define = CANDefine("tesla_model3_party")
+    if self.SAFETY_PARAM & TeslaSafetyFlags.LEGACY_DAS_STEERING:
+      dbc_name = "tesla_model3_party_legacy"
+    else:
+      dbc_name = "tesla_model3_party"
+    self.packer = CANPackerSafety(dbc_name)
+    self.define = CANDefine(dbc_name)
     self.acc_states = {d: v for v, d in self.define.dv["DAS_control"]["DAS_accState"].items()}
     self.autopark_states = {d: v for v, d in self.define.dv["DI_state"]["DI_autoparkState"].items()}
     self.active_autopark_states = [self.autopark_states[s] for s in ('ACTIVE', 'COMPLETE', 'SELFPARK_STARTED')]
@@ -410,6 +414,8 @@ class TestTeslaStockSafety(TestTeslaSafetyBase):
 class TestTeslaFSD14StockSafety(TestTeslaStockSafety):
   SAFETY_PARAM = TeslaSafetyFlags.FSD_14
 
+class TestTeslaLegacyDasSteeringStockSafety(TestTeslaStockSafety):
+  SAFETY_PARAM = TeslaSafetyFlags.LEGACY_DAS_STEERING
 
 class TestTeslaLongitudinalSafety(TestTeslaSafetyBase):
   SAFETY_PARAM = TeslaSafetyFlags.LONG_CONTROL
