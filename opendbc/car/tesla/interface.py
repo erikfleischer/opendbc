@@ -2,7 +2,7 @@ from opendbc.car import Bus, get_safety_config, structs
 from opendbc.car.interfaces import CarInterfaceBase
 from opendbc.car.tesla.carcontroller import CarController
 from opendbc.car.tesla.carstate import CarState
-from opendbc.car.tesla.values import TeslaSafetyFlags, TeslaFlags, CANBUS, CAR, DBC, FSD_14_FW_RULES, NON_FSD_14_SELFDRIVE_FW_RULES, Ecu, match_rules
+from opendbc.car.tesla.values import TeslaSafetyFlags, TeslaFlags, CANBUS, CAR, DBC, FSD_14_FW_RULES, LEGACY_FW_RULES, Ecu, match_rules
 from opendbc.car.tesla.radar_interface import RadarInterface, RADAR_START_ADDR
 
 
@@ -48,10 +48,10 @@ class CarInterface(CarInterfaceBase):
       ret.flags |= TeslaFlags.FSD_14.value
       ret.safetyConfigs[0].safetyParam |= TeslaSafetyFlags.FSD_14.value
 
-    non_fsd_14_selfdrive = any(fw.ecu == Ecu.eps and match_rules(NON_FSD_14_SELFDRIVE_FW_RULES.get(candidate, []), fw.fwVersion) for fw in car_fw)
-    if non_fsd_14_selfdrive:
-      ret.flags |= TeslaFlags.NON_FSD_14_SELFDRIVE.value
-      ret.safetyConfigs[0].safetyParam |= TeslaSafetyFlags.NON_FSD_14_SELFDRIVE.value
+    legacy_fw = any(fw.ecu == Ecu.eps and match_rules(LEGACY_FW_RULES.get(candidate, []), fw.fwVersion) for fw in car_fw)
+    if legacy_fw:
+      ret.flags |= TeslaFlags.LEGACY_DAS_STEERING.value
+      ret.safetyConfigs[0].safetyParam |= TeslaSafetyFlags.LEGACY_DAS_STEERING.value
 
     ret.dashcamOnly = candidate in (CAR.TESLA_MODEL_X,)  # dashcam only, pending find invalidLkasSetting signal
 
