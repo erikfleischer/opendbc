@@ -4,31 +4,13 @@ from opendbc.car import gen_empty_fingerprint
 from opendbc.car.tesla.interface import CarInterface
 from opendbc.car.tesla.fingerprints import FW_VERSIONS
 from opendbc.car.tesla.radar_interface import RADAR_START_ADDR
-from opendbc.car.tesla.values import CAR, FSD_14_FW_RULES, NON_FSD_14_SELFDRIVE_FW_RULES, Ecu, FW_RE, match_rules, compile_rules_dict
+from opendbc.car.tesla.values import CAR, FSD_14_FW_RULES, LEGACY_FW_RULES, Ecu, FW_RE, match_rules, compile_rules_dict
 
 PLATFORM_TO_CAR = {
   b'E': CAR.TESLA_MODEL_3,
   b'Y': CAR.TESLA_MODEL_Y,
   b'X': CAR.TESLA_MODEL_X,
 }
-
-# Non FSD 14 HW4 and HW3 cars with older FW (2026.8.3-) in which Tesla uses
-# "Autopilot" as name for its ADAS.
-# Tuple format: (variant_code_regex, software_major, software_major greater or equal)
-NON_FSD_14_AUTOPILOT_FW_RULES = {
-  CAR.TESLA_MODEL_3: [
-    (b'^(L|S)?014$', 19, 0),
-    (b'^4.*014$', 0, 1),
-    (b'^4.*015$', 3, 0),
-  ],
-  CAR.TESLA_MODEL_Y: [
-    (b'^(P|S)?002$', 20, 0),
-    (b'^4.*002$', 0, 1),
-    (b'^4.*003$', 3, 0),
-  ],
-}
-
-NON_FSD_14_AUTOPILOT_FW_RULES = compile_rules_dict(NON_FSD_14_AUTOPILOT_FW_RULES)
 
 # Cars with this EPS FW have FSD 14 and use TeslaFlags.FSD_14
 # For these cars we need to send a different value on DAS_steeringControlType.
@@ -55,6 +37,20 @@ NON_FSD_14_SELFDRIVE_FW = {
     b'TeM3_E014p10_0.0.0 (24),YP002.21.2',
   ]
 }
+
+# Non FSD 14 HW4 and HW3 cars with recent FW (2026.8.6+) in which Tesla uses
+# "Self-Driving" as name for its ADAS.
+# Tuple format: (variant_code_regex, software_major, software_major greater or equal)
+NON_FSD_14_SELFDRIVE_FW_RULES = {
+  CAR.TESLA_MODEL_3: [
+    (b'^(L|S)?014$', 20, 1),
+  ],
+  CAR.TESLA_MODEL_Y: [
+    (b'^(P|S)?002$', 21, 1),
+  ],
+}
+
+NON_FSD_14_SELFDRIVE_FW_RULES = compile_rules_dict(NON_FSD_14_SELFDRIVE_FW_RULES)
 class TestTeslaFingerprint(unittest.TestCase):
   def test_fw_platform_code(self):
     # Every EPS FW must parse and its platform letter must match the car it's filed under.
@@ -102,7 +98,7 @@ class TestTeslaFingerprint(unittest.TestCase):
         matches = [
           match_rules(FSD_14_FW_RULES[car_model], fw),
           match_rules(NON_FSD_14_SELFDRIVE_FW_RULES[car_model], fw),
-          match_rules(NON_FSD_14_AUTOPILOT_FW_RULES[car_model], fw),
+          match_rules(LEGACY_FW_RULES[car_model], fw),
         ]
         assert sum(matches) == 1, f"{fw}: matched {sum(matches)} rule sets"
 

@@ -120,15 +120,19 @@ FSD_14_FW_RULES = {
   ],
 }
 
-# Non FSD 14 HW4 and HW3 cars with recent FW (2026.8.6+) in which Tesla uses
-# "Self-Driving" as name for its ADAS.
+# Non FSD 14 HW4 and HW3 cars with older FW (2026.8.3-) in which Tesla uses
+# "Autopilot" as name for its ADAS.
 # Tuple format: (variant_code_regex, software_major, software_major greater or equal)
-NON_FSD_14_SELFDRIVE_FW_RULES = {
+LEGACY_FW_RULES = {
   CAR.TESLA_MODEL_3: [
-    (b'^(L|S)?014$', 20, 1),
+    (b'^(L|S)?014$', 19, 0),
+    (b'^4.*014$', 0, 1),
+    (b'^4.*015$', 3, 0),
   ],
   CAR.TESLA_MODEL_Y: [
-    (b'^(P|S)?002$', 21, 1),
+    (b'^(P|S)?002$', 20, 0),
+    (b'^4.*002$', 0, 1),
+    (b'^4.*003$', 3, 0),
   ],
 }
 
@@ -159,8 +163,7 @@ def match_rules(rules, fw) -> bool:
   return any_rule_matches
 
 FSD_14_FW_RULES = compile_rules_dict(FSD_14_FW_RULES)
-NON_FSD_14_SELFDRIVE_FW_RULES = compile_rules_dict(NON_FSD_14_SELFDRIVE_FW_RULES)
-
+LEGACY_FW_RULES = compile_rules_dict(LEGACY_FW_RULES)
 class CANBUS:
   party = 0
   vehicle = 1
@@ -208,13 +211,13 @@ class CarControllerParams:
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1
   FSD_14 = 2
-  NON_FSD_14_SELFDRIVE = 4
+  LEGACY_DAS_STEERING = 4
 
 
 class TeslaFlags(IntFlag):
   LONG_CONTROL = 1
   FSD_14 = 2
-  NON_FSD_14_SELFDRIVE = 4
+  LEGACY_DAS_STEERING = 4
   MISSING_DAS_SETTINGS = 8
 
 
