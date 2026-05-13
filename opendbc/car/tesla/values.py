@@ -49,7 +49,11 @@ class CAR(Platforms):
       TeslaCarDocsHW4("Tesla Model 3 (with HW4) 2024-25"),
     ],
     CarSpecs(mass=1899., wheelbase=2.875, steerRatio=12.0),
-    {Bus.party: 'tesla_model3_party', Bus.radar: 'tesla_radar_continental_generated'},
+    {
+      Bus.party: 'tesla_model3_party',
+      Bus.alt: 'tesla_model3_party_legacy',
+      Bus.radar: 'tesla_radar_continental_generated',
+    },
   )
   TESLA_MODEL_Y = TeslaPlatformConfig(
     [
@@ -57,7 +61,11 @@ class CAR(Platforms):
       TeslaCarDocsHW4("Tesla Model Y (with HW4) 2024-25"),
     ],
     CarSpecs(mass=2072., wheelbase=2.890, steerRatio=12.0),
-    {Bus.party: 'tesla_model3_party', Bus.radar: 'tesla_radar_continental_generated'},
+    {
+      Bus.party: 'tesla_model3_party',
+      Bus.alt: 'tesla_model3_party_legacy',
+      Bus.radar: 'tesla_radar_continental_generated',
+    },
   )
   TESLA_MODEL_X = TeslaPlatformConfig(
     [TeslaCarDocsHW4("Tesla Model X (with HW4) 2024")],
@@ -164,6 +172,7 @@ def match_rules(rules, fw) -> bool:
 
 FSD_14_FW_RULES = compile_rules_dict(FSD_14_FW_RULES)
 LEGACY_FW_RULES = compile_rules_dict(LEGACY_FW_RULES)
+
 class CANBUS:
   party = 0
   vehicle = 1

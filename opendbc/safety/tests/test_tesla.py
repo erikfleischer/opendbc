@@ -77,8 +77,9 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
     self.safety.init_tests()
 
   def _angle_cmd_msg(self, angle: float, state: bool | int, increment_timer: bool = True, bus: int = 0):
-    # If FSD 14, translate steer control type to new flipped definition
-    if self.safety.get_current_safety_param() & TeslaSafetyFlags.FSD_14:
+    # If FSD 14, translate steer control type to new value if state is a bool and True
+    # Checking for bool allows passing through control types for tx tests.
+    if self.safety.get_current_safety_param() & TeslaSafetyFlags.FSD_14 and isinstance(state, bool) and state:
       state = get_steer_ctrl_type(TeslaFlags.FSD_14, int(state))
 
     values = {"DAS_steeringAngleRequest": angle, "DAS_steeringControlType": state}
@@ -270,17 +271,23 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
       self.assertEqual(self.LONGITUDINAL, self._tx(self._long_control_msg(0, acc_state=self.acc_states["ACC_ON"])))
 
   def test_steering_control_type(self):
-    # Only angle control is allowed (no LANE_KEEP_ASSIST or EMERGENCY_LANE_KEEP)
+    # Only angle control or FSD is allowed (no LANE_KEEP_ASSIST or EMERGENCY_LANE_KEEP)
+    if self.safety.get_current_safety_param() & TeslaSafetyFlags.FSD_14:
+      allowed_steer_control_types = (self.steer_control_types["NONE"],
+                                     self.steer_control_types["FSD"])
+    else:
+      allowed_steer_control_types = (self.steer_control_types["NONE"],
+                                     self.steer_control_types["ANGLE_CONTROL"])
+
     self.safety.set_controls_allowed(True)
     for steer_control_type in range(4):
-      should_tx = steer_control_type in (self.steer_control_types["NONE"],
-                                         self.steer_control_types["ANGLE_CONTROL"])
-      self.assertEqual(should_tx, self._tx(self._angle_cmd_msg(0, state=steer_control_type)))
+      should_tx = steer_control_type in allowed_steer_control_types
+      self.assertEqual(should_tx, self._tx(self._angle_cmd_msg(0, state=steer_control_type)), f"{steer_control_type=}")
 
   def test_stock_lkas_passthrough(self):
     # TODO: make these generic passthrough tests
     no_lkas_msg = self._angle_cmd_msg(0, state=False)
-    no_lkas_msg_cam = self._angle_cmd_msg(0, state=True, bus=2)
+    no_lkas_msg_cam = self._angle_cmd_msg(0, state=False, bus=2)
     lkas_msg_cam = self._angle_cmd_msg(0, state=self.steer_control_types['LANE_KEEP_ASSIST'], bus=2)
 
     # stock system sends no LKAS -> no forwarding, and OP is allowed to TX
