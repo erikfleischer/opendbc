@@ -30,6 +30,7 @@ class CarState(CarStateBase):
 
     self.hands_on_level = 0
     self.das_control = None
+    self.no_steering_control = False
 
   def update_autopark_state(self, autopark_state: str, cruise_enabled: bool):
     autopark_now = autopark_state in ("ACTIVE", "COMPLETE", "SELFPARK_STARTED")
@@ -138,6 +139,9 @@ class CarState(CarStateBase):
         if not self.fsd14_error_logged:
           carlog.error("possible FSD 14 detected, but FW did not match FSD 14 rules.")
           self.fsd14_error_logged = True
+
+    if self.no_steering_control:
+      ret.invalidLkasSetting = True
 
     # Buttons # ToDo: add Gap adjust button
 
