@@ -7,6 +7,47 @@ from opendbc.car.tesla.teslacan import TeslaCAN
 from opendbc.car.tesla.values import CarControllerParams
 from opendbc.car.vehicle_model import VehicleModel
 
+class SteeringControlDiag:
+  def __init__(self):
+    self.vEgoMin = 2
+    self.steeringAngleDegFiltered = 0.0
+    self.agDifThd = 2
+    self.agDesStored = None
+    self.agActStored = 0.0
+    self.cntReactStart = 60
+    self.cntReact = 0
+    self.eps = 0.5
+
+  def update(self, steeringAngleDeg, steeringAngleDegDesired, vEgo, bLatEnabled: bool):
+    bTriggered = False
+    if vEgo > self.vEgoMin and bLatEnabled:
+      agDif = self.steeringAngleDegFiltered - steeringAngleDeg
+      if self.agDesStored is None:
+        if np.abs(agDif) > self.agDifThd:
+          self.agDesStored = steeringAngleDegDesired
+          self.agActStored = steeringAngleDeg
+          self.cntReact = self.cntReactStart
+      else:
+        self.cntReact = self.cntReact - 1
+        # reset diagnostic if steering angle is moving towards stored the desired angle or desired angle has moved in the opposite direction
+        if self.agActStored > self.agDesStored and (np.abs(steeringAngleDeg - self.agDesStored) < self.eps or steeringAngleDegDesired > self.agDesStored):
+          self.agDesStored = None
+          self.agActStored = 0.0
+          self.cntReact = 0
+        elif self.agActStored < self.agDesStored and (np.abs(steeringAngleDeg - self.agDesStored) < self.eps or steeringAngleDegDesired < self.agDesStored):
+          self.agDesStored = None
+          self.agActStored = 0.0
+          self.cntReact = 0
+        elif self.cntReact == 0:
+          self.agDesStored = None
+          self.agActStored = 0.0
+          self.cntReact = 0
+          bTriggered = True
+    else:
+      self.agDesStored = None
+      self.agActStored = 0.0
+      self.cntReact = 0
+    return bTriggered
 
 def get_safety_CP():
   # We use the TESLA_MODEL_Y platform for lateral limiting to match safety
@@ -21,6 +62,7 @@ class CarController(CarControllerBase):
     self.apply_angle_last = 0
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(CP, self.packer)
+    self.steerDiag = SteeringControlDiag()
 
     # Vehicle model used for lateral limiting
     self.VM = VehicleModel(get_safety_CP())
@@ -40,6 +82,8 @@ class CarController(CarControllerBase):
                                                           lat_active, CarControllerParams, self.VM)
 
       can_sends.append(self.tesla_can.create_steering_control(self.apply_angle_last, lat_active))
+
+      CS.no_steering_control |= self.steerDiag.update(CS.out.steeringAngleDeg, self.apply_angle_last, CS.out.vEgoRaw, lat_active)
 
     if self.frame % 10 == 0:
       can_sends.append(self.tesla_can.create_steering_allowed())
