@@ -10,31 +10,29 @@ from opendbc.car.vehicle_model import VehicleModel
 class SteeringControlDiag:
   def __init__(self):
     self.vEgoMin = 2
-    self.steeringAngleDegFiltered = 0.0
     self.agDifThd = 2
     self.agDesStored = None
     self.agActStored = 0.0
     self.cntReactStart = 60
     self.cntReact = 0
-    self.eps = 0.5
 
   def update(self, steeringAngleDeg, steeringAngleDegDesired, vEgo, bLatEnabled: bool):
     bTriggered = False
     if vEgo > self.vEgoMin and bLatEnabled:
-      agDif = self.steeringAngleDegFiltered - steeringAngleDeg
+      agDif = steeringAngleDegDesired - steeringAngleDeg
       if self.agDesStored is None:
         if np.abs(agDif) > self.agDifThd:
-          self.agDesStored = steeringAngleDegDesired
+          self.agDesStored = np.clip(steeringAngleDegDesired, steeringAngleDeg - self.agDifThd, steeringAngleDeg + self.agDifThd)
           self.agActStored = steeringAngleDeg
           self.cntReact = self.cntReactStart
       else:
         self.cntReact = self.cntReact - 1
         # reset diagnostic if steering angle is moving towards stored the desired angle or desired angle has moved in the opposite direction
-        if self.agActStored > self.agDesStored and (np.abs(steeringAngleDeg - self.agDesStored) < self.eps or steeringAngleDegDesired > self.agDesStored):
+        if self.agActStored > self.agDesStored and ((steeringAngleDeg < self.agDesStored) or (steeringAngleDegDesired > self.agDesStored)):
           self.agDesStored = None
           self.agActStored = 0.0
           self.cntReact = 0
-        elif self.agActStored < self.agDesStored and (np.abs(steeringAngleDeg - self.agDesStored) < self.eps or steeringAngleDegDesired < self.agDesStored):
+        elif self.agActStored < self.agDesStored and ((steeringAngleDeg > self.agDesStored) or (steeringAngleDegDesired < self.agDesStored)):
           self.agDesStored = None
           self.agActStored = 0.0
           self.cntReact = 0
