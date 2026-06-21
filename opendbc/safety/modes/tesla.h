@@ -6,6 +6,21 @@ static bool tesla_longitudinal = false;
 static bool tesla_fsd_14 = false;
 static bool tesla_legacy_das_steering = false;
 static bool tesla_stock_aeb = false;
+static bool tesla_stock_brake_passthrough = false;
+
+// Stock brake passthrough: match CarControllerParams in opendbc/car/tesla/values.py
+// Raw accel units: physical = raw * 0.04 - 15 m/s^2
+static const int TESLA_STOCK_BRAKE_ENTER_TOLERANCE_RAW = 10;   // 0.4 m/s^2
+static const int TESLA_STOCK_BRAKE_EXIT_TOLERANCE_RAW = 4;     // 0.15 m/s^2
+static const int TESLA_STOCK_BRAKE_MIN_DECEL_RAW = 370;        // -0.2 m/s^2
+static const int TESLA_STOCK_BRAKE_EXIT_HOLD_COUNT = 8;
+static const int TESLA_STOCK_BRAKE_MAX_PASSTHROUGH_TICKS = 125;  // 5 s at 25 Hz
+
+static int tesla_stock_accel_min_raw = 375;  // 0 m/s^2
+static int tesla_stock_acc_state = 0;
+static int tesla_last_op_accel_min_raw = 375;
+static int tesla_brake_exit_hold_counter = 0;
+static int tesla_brake_passthrough_ticks = 0;
 
 // Only rising edges while controls are not allowed are considered for these systems:
 // TODO: Only LKAS (non-emergency) is currently supported since we've only seen it
@@ -98,6 +113,14 @@ static int tesla_get_steer_ctrl_type(const uint8_t byte2) {
   return tesla_legacy_das_steering ? (byte2 >> 6) : ((byte2 >> 5) & 0x07U);
 }
 
+static bool tesla_stock_acc_active(int acc_state) {
+  return (acc_state == 3) || (acc_state == 4);  // ACC_HOLD, ACC_ON
+}
+
+static int tesla_get_accel_min_raw(const CANPacket_t *msg) {
+  return ((msg->data[5] & 0x0FU) << 5) | (msg->data[4] >> 3);
+}
+
 static void tesla_rx_hook(const CANPacket_t *msg) {
 
   if (msg->bus == 0U) {
@@ -178,6 +201,24 @@ static void tesla_rx_hook(const CANPacket_t *msg) {
     if (msg->addr == 0x2b9U) {
       // "AEB_ACTIVE"
       tesla_stock_aeb = (msg->data[2] & 0x03U) == 1U;
+      tesla_stock_accel_min_raw = tesla_get_accel_min_raw(msg);
+      tesla_stock_acc_state = msg->data[1] >> 4;
+
+      if (tesla_stock_brake_passthrough && !tesla_stock_aeb) {
+        tesla_brake_passthrough_ticks++;
+        if (tesla_brake_passthrough_ticks > TESLA_STOCK_BRAKE_MAX_PASSTHROUGH_TICKS) {
+          tesla_stock_brake_passthrough = false;
+          tesla_brake_exit_hold_counter = 0;
+        } else if (tesla_stock_accel_min_raw >= (tesla_last_op_accel_min_raw - TESLA_STOCK_BRAKE_EXIT_TOLERANCE_RAW)) {
+          tesla_brake_exit_hold_counter++;
+          if (tesla_brake_exit_hold_counter >= TESLA_STOCK_BRAKE_EXIT_HOLD_COUNT) {
+            tesla_stock_brake_passthrough = false;
+            tesla_brake_exit_hold_counter = 0;
+          }
+        } else {
+          tesla_brake_exit_hold_counter = 0;
+        }
+      }
     }
 
     // DAS_steeringControl
@@ -275,8 +316,26 @@ static bool tesla_tx_hook(const CANPacket_t *msg) {
     }
 
     int raw_accel_max = ((msg->data[6] & 0x1FU) << 4) | (msg->data[5] >> 4);
-    int raw_accel_min = ((msg->data[5] & 0x0FU) << 5) | (msg->data[4] >> 3);
+    int raw_accel_min = tesla_get_accel_min_raw(msg);
     int acc_state = msg->data[1] >> 4;
+
+    if (acc_state == 13) {  // ACC_CANCEL_GENERIC_SILENT
+      tesla_stock_brake_passthrough = false;
+      tesla_brake_exit_hold_counter = 0;
+      tesla_brake_passthrough_ticks = 0;
+    } else if (tesla_stock_brake_passthrough) {
+      violation = true;
+    } else if (tesla_longitudinal && tesla_stock_acc_active(tesla_stock_acc_state) &&
+               (tesla_stock_accel_min_raw < TESLA_STOCK_BRAKE_MIN_DECEL_RAW) &&
+               (tesla_stock_accel_min_raw < (raw_accel_min - TESLA_STOCK_BRAKE_ENTER_TOLERANCE_RAW))) {
+      tesla_last_op_accel_min_raw = raw_accel_min;
+      tesla_stock_brake_passthrough = true;
+      tesla_brake_exit_hold_counter = 0;
+      tesla_brake_passthrough_ticks = 0;
+      violation = true;
+    } else {
+      tesla_last_op_accel_min_raw = raw_accel_min;
+    }
 
     if (tesla_longitudinal) {
       // Prevent both acceleration from being negative, as this could cause the car to reverse after coming to standstill
@@ -323,7 +382,7 @@ static bool tesla_fwd_hook(int bus_num, int addr) {
       }
 
       // DAS_control
-      if (tesla_longitudinal && (addr == 0x2b9) && !tesla_stock_aeb) {
+      if (tesla_longitudinal && (addr == 0x2b9) && !tesla_stock_aeb && !tesla_stock_brake_passthrough) {
         block_msg = true;
       }
     }
@@ -358,6 +417,12 @@ static safety_config tesla_init(uint16_t param) {
 #endif
 
   tesla_stock_aeb = false;
+  tesla_stock_brake_passthrough = false;
+  tesla_stock_accel_min_raw = 375;
+  tesla_stock_acc_state = 0;
+  tesla_last_op_accel_min_raw = 375;
+  tesla_brake_exit_hold_counter = 0;
+  tesla_brake_passthrough_ticks = 0;
   tesla_stock_lkas = false;
   tesla_stock_lkas_prev = false;
   // we need to assume Autopark/Summon on startup since DI_state is a low freq msg.

@@ -3,6 +3,7 @@ from opendbc.can import CANPacker
 from opendbc.car import Bus
 from opendbc.car.lateral import apply_steer_angle_limits_vm
 from opendbc.car.interfaces import CarControllerBase
+from opendbc.car.tesla.longitudinal import StockLongPassthrough
 from opendbc.car.tesla.teslacan import TeslaCAN
 from opendbc.car.tesla.values import CarControllerParams
 from opendbc.car.vehicle_model import VehicleModel
@@ -61,6 +62,7 @@ class CarController(CarControllerBase):
     self.packer = CANPacker(dbc_names[Bus.party])
     self.tesla_can = TeslaCAN(CP, self.packer)
     self.steerDiag = SteeringControlDiag()
+    self.stock_long = StockLongPassthrough()
 
     # Vehicle model used for lateral limiting
     self.VM = VehicleModel(get_safety_CP())
@@ -91,8 +93,14 @@ class CarController(CarControllerBase):
       if self.frame % 4 == 0:
         state = 13 if CC.cruiseControl.cancel else 4  # 4=ACC_ON, 13=ACC_CANCEL_GENERIC_SILENT
         accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
-        cntr = (self.frame // 4) % 8
-        can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CS.out.vEgo, CC.longActive))
+        defer = self.stock_long.update(accel, CS.das_control, CC.cruiseControl.cancel, CC.longActive)
+        CS.stock_long_passthrough = defer
+        if not defer:
+          if CC.cruiseControl.cancel or self.stock_long.just_exited:
+            cntr = (CS.das_control["DAS_controlCounter"] + 1) % 8
+          else:
+            cntr = (self.frame // 4) % 8
+          can_sends.append(self.tesla_can.create_longitudinal_command(state, accel, cntr, CS.out.vEgo, CC.longActive))
 
     else:
       # Increment counter so cancel is prioritized even without openpilot longitudinal

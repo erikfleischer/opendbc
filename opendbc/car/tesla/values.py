@@ -203,6 +203,14 @@ class CarControllerParams:
   JERK_LIMIT_MAX = 4.9  # m/s^3, ACC faults at 5.0
   JERK_LIMIT_MIN = -4.9  # m/s^3, ACC faults at 5.0
 
+  # Stock longitudinal passthrough (alpha long): defer to Autopilot when it brakes harder
+  STOCK_BRAKE_ENTER_TOLERANCE = 0.4   # m/s^2
+  STOCK_BRAKE_EXIT_TOLERANCE = 0.15  # m/s^2
+  STOCK_BRAKE_MIN_DECEL = 0.2        # m/s^2, ignore noise near 0
+  STOCK_BRAKE_EXIT_HOLD_FRAMES = 8   # ~320 ms at 25 Hz
+  STOCK_BRAKE_MAX_PASSTHROUGH_SEC = 5.0
+  STOCK_BRAKE_LONG_HZ = 25
+
 
 class TeslaSafetyFlags(IntFlag):
   LONG_CONTROL = 1

@@ -31,6 +31,7 @@ class CarState(CarStateBase):
     self.hands_on_level = 0
     self.das_control = None
     self.no_steering_control = False
+    self.stock_long_passthrough = False
 
   def update_autopark_state(self, autopark_state: str, cruise_enabled: bool):
     autopark_now = autopark_state in ("ACTIVE", "COMPLETE", "SELFPARK_STARTED")

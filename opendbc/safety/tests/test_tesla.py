@@ -129,7 +129,7 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
     }
     return self.packer.make_can_msg_safety("DI_state", 0, values)
 
-  def _long_control_msg(self, set_speed, acc_state=0, jerk_limits=(0, 0), accel_limits=(0, 0), aeb_event=0, bus=0):
+  def _long_control_msg(self, set_speed, acc_state=0, jerk_limits=(0, 0), accel_limits=(0, 0), aeb_event=0, bus=0, counter=None):
     values = {
       "DAS_setSpeed": set_speed,
       "DAS_accState": acc_state,
@@ -139,6 +139,8 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
       "DAS_accelMin": accel_limits[0],
       "DAS_accelMax": accel_limits[1],
     }
+    if counter is not None:
+      values["DAS_controlCounter"] = counter
     return self.packer.make_can_msg_safety("DAS_control", bus, values)
 
   def _accel_msg(self, accel: float):
@@ -441,6 +443,72 @@ class TestTeslaLongitudinalSafety(TestTeslaSafetyBase):
     self.assertEqual(1, self._rx(aeb_msg_cam))
     self.assertEqual(0, self.safety.safety_fwd_hook(2, aeb_msg_cam.addr))
     self.assertFalse(self._tx(no_aeb_msg))
+
+  def test_stock_brake_passthrough_enter(self):
+    acc_on = self.acc_states["ACC_ON"]
+    cnt = 0
+    for _ in range(6):
+      self._rx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt))
+      cnt = (cnt + 1) % 8
+    stock_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt)
+    cnt = (cnt + 1) % 8
+    op_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.5, 0))
+
+    self.safety.set_controls_allowed(True)
+    self.assertEqual(1, self._rx(stock_msg))
+    self.assertFalse(self._tx(op_msg))
+    self.assertEqual(0, self.safety.safety_fwd_hook(2, stock_msg.addr))
+
+  def test_stock_brake_passthrough_exit(self):
+    acc_on = self.acc_states["ACC_ON"]
+    cnt = 0
+    for _ in range(7):
+      self._rx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt))
+      cnt = (cnt + 1) % 8
+    stock_hard = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt)
+    cnt = (cnt + 1) % 8
+    op_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.5, 0))
+
+    self.safety.set_controls_allowed(True)
+    self._rx(stock_hard)
+    self.assertFalse(self._tx(op_msg))
+
+    for _ in range(8):
+      self._rx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.3, 0), bus=2, counter=cnt))
+      cnt = (cnt + 1) % 8
+
+    self.assertTrue(self._tx(op_msg))
+    self.assertEqual(-1, self.safety.safety_fwd_hook(2, MSG_DAS_Control))
+
+  def test_stock_brake_cancel_overrides(self):
+    acc_on = self.acc_states["ACC_ON"]
+    cnt = 0
+    for _ in range(6):
+      self._rx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt))
+      cnt = (cnt + 1) % 8
+    stock_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-2.0, 0), bus=2, counter=cnt)
+    cnt = (cnt + 1) % 8
+    cancel_msg = self._long_control_msg(10, acc_state=self.acc_states["ACC_CANCEL_GENERIC_SILENT"], accel_limits=(0, 0))
+
+    self.safety.set_controls_allowed(True)
+    self._rx(stock_msg)
+    self.assertFalse(self._tx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.5, 0))))
+    self.assertTrue(self._tx(cancel_msg))
+    self.assertEqual(-1, self.safety.safety_fwd_hook(2, stock_msg.addr))
+
+  def test_stock_brake_no_passthrough_within_tolerance(self):
+    acc_on = self.acc_states["ACC_ON"]
+    cnt = 0
+    for _ in range(6):
+      self._rx(self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.6, 0), bus=2, counter=cnt))
+      cnt = (cnt + 1) % 8
+    stock_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.6, 0), bus=2, counter=cnt)
+    op_msg = self._long_control_msg(10, acc_state=acc_on, accel_limits=(-0.5, 0))
+
+    self.safety.set_controls_allowed(True)
+    self.assertEqual(1, self._rx(stock_msg))
+    self.assertTrue(self._tx(op_msg))
+    self.assertEqual(-1, self.safety.safety_fwd_hook(2, stock_msg.addr))
 
   def test_prevent_reverse(self):
     # Note: Tesla can reverse while at a standstill if both accel_min and accel_max are negative.
