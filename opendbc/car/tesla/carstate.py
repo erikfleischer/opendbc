@@ -140,7 +140,7 @@ class CarState(CarStateBase):
           carlog.error("possible FSD 14 detected, but FW did not match FSD 14 rules.")
           self.fsd14_error_logged = True
 
-    if self.no_steering_control:
+    if self.no_steering_control or self.stock_long_passthrough:
       ret.invalidLkasSetting = True
 
     # Buttons # ToDo: add Gap adjust button
