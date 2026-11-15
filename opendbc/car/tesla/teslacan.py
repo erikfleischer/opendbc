@@ -1,6 +1,7 @@
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.tesla.values import CANBUS, CarControllerParams
 
+A_T_HORIZON = 0.5
 
 class TeslaCAN:
   def __init__(self, CP, packer):
@@ -17,7 +18,11 @@ class TeslaCAN:
     return self.packer.make_can_msg("DAS_steeringControl", CANBUS.party, values)
 
   def create_longitudinal_command(self, acc_state, accel, counter, v_ego, active):
-    set_speed = min(max(v_ego + accel, 0) * CV.MS_TO_KPH, 400)
+    set_speed = min(max(v_ego + accel * A_T_HORIZON, 0) * CV.MS_TO_KPH, 400)
+
+    # tesla seems to ignore values in DAS_accelMin between -0.5 and 0
+    if accel < 0 or accel > -0.5:
+      accel = -0.5
 
     values = {
       "DAS_setSpeed": set_speed,
